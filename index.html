@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Idle Tycoon</title>
+    <!-- Link to the external CSS file -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="ui">
+        <div class="stat-card">
+            <div>Gold: <span id="gold-label">0</span></div>
+            <button id="manual-click-btn" style="margin-top: 10px; padding: 5px 10px; background: #e67e22; border: none; color: white; border-radius: 4px; cursor: pointer; pointer-events: auto; font-weight: bold; width: 100%;">Work Manually (+<span id="click-value">1</span>)</button>
+            <div class="hint">Drag to move • Pinch/Scroll (coming soon)</div>
+            <div id="save-indicator" style="color: #2ecc71; font-size: 10px; opacity: 0; transition: opacity 0.5s;">● SAVING...</div>
+        </div>
+    </div>
+    <div id="upgrade-modal" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #34495e; color: white; padding: 20px; border-radius: 10px; border: 2px solid #e67e22; z-index: 100; min-width: 250px; text-align: center;">
+    <h3 id="modal-title">Station Name</h3>
+    <p>Level: <span id="modal-level">1</span></p>
+    <p style="color: #f1c40f;">Base Production: <span id="modal-base-income">0</span> Gold</p>
+    <p>Income: <span id="modal-income">0</span> Gold</p>
+    <p>Upgrade Cost: <span id="modal-cost">0</span> Gold</p>
+    
+    <div id="worker-controls" style="margin: 15px 0; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">
+        <div>Workers Assigned</div>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 5px;">
+            <button id="minus-worker" style="width: 30px; height: 30px; cursor: pointer;">-</button>
+            <span id="modal-worker-count" style="font-size: 20px; font-weight: bold;">0</span>
+            <button id="plus-worker" style="width: 30px; height: 30px; cursor: pointer;">+</button>
+        </div>
+        <div style="font-size: 11px; color: #bdc3c7; margin-top: 5px;">
+            Idle in Hub: <span id="idle-worker-count">0</span>
+        </div>
+    </div>
+
+    <button id="upgrade-btn" style="background: #27ae60; border: none; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;">Upgrade Station</button>
+    <button id="hub-milestone-btn" style="display: none; margin-top: 10px; background: #8e44ad; border: none; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;">
+    Upgrade Click Power
+    </button>
+    <button onclick="document.getElementById('upgrade-modal').style.display='none'" style="background: #c0392b; border: none; color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 10px; width: 100%;">Close</button>
+</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script src="src/config.js"></script>
+    <script src="src/camera.js"></script>
+    <script src="src/entities.js"></script>
+    <script src="src/storage.js"></script>
+    <script src="src/main.js"></script>
+</body>
+</html>

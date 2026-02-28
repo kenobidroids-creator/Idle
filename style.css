@@ -1,0 +1,39 @@
+body, html { 
+        margin: 0; 
+        padding: 0; 
+        overflow: hidden; 
+        background: #1a1a1a; 
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+}
+canvas {
+        display: block; 
+        touch-action: none; 
+}
+
+#ui {
+        position: absolute; 
+        top: 20px; 
+        left: 20px; 
+        color: white; 
+        pointer-events: none; 
+        z-index: 10;
+}
+
+.stat-card {
+        background: rgba(0,0,0,0.7); 
+        padding: 10px 20px; 
+        border-radius: 8px; 
+        border-left: 4px solid #e67e22; 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+}
+
+#gold-label {
+        font-size: 24px; 
+        font-weight: bold; 
+        color: #f1c40f;
+}
+
+.hint { 
+        font-size: 12px; 
+        color: #bdc3c7; 
+        margin-top: 5px; }
