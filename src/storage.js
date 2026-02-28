@@ -20,62 +20,46 @@ const StorageManager = {
 
     load() {
     const data = localStorage.getItem(this.saveKey);
-    if (!data) return;
+    if (!data) {
+        console.log("No save data found. Starting fresh!");
+        return;
+    }
 
     try {
         const savedState = JSON.parse(data);
         
-        // --- AWAY EARNINGS CALCULATION ---
+        // --- KEEP EXISTING: AWAY EARNINGS LOGIC ---
         const now = Date.now();
         const secondsAway = (now - (savedState.lastSave || now)) / 1000;
         
-        // You must be away for at least 60 seconds
         if (secondsAway > 60 && savedState.stations) {
-            let totalEarned = 0;
-            let breakdown = [];
+    let totalEarned = 0;
+    let breakdown = [];
 
-            savedState.stations.forEach(s => {
-                if (!s.isRecruiter && s.workersAssigned > 0) {
-                    const workTimeSeconds = s.workTime / 1000;
-                    const ratePerSecond = (s.income * s.level * s.workersAssigned) / workTimeSeconds;
-                    const stationEarned = ratePerSecond * secondsAway * 0.5; // 50% efficiency
-                    
-                    if (stationEarned > 0) {
-                        totalEarned += stationEarned;
-                        breakdown.push({ name: s.name, gold: Math.floor(stationEarned) });
-                    }
-                }
-            });
-
-            if (totalEarned > 0) {
-                // Call the modal function
-                this.showWelcomeModal(totalEarned, breakdown);
+    savedState.stations.forEach(s => {
+        if (!s.isRecruiter && s.workersAssigned > 0) {
+            const ratePerSecond = (s.income * s.level * s.workersAssigned) / (s.workTime / 1000);
+            const stationEarned = ratePerSecond * secondsAway * 0.5; // 50% efficiency
+            
+            if (stationEarned > 0) {
+                totalEarned += stationEarned;
+                breakdown.push({ name: s.name, gold: Math.floor(stationEarned) });
             }
         }
+    });
 
-        // --- SYNC DATA ---
-        gameState.gold = savedState.gold ?? gameState.gold;
-        gameState.unassignedWorkers = savedState.unassignedWorkers ?? gameState.unassignedWorkers;
-
-        if (savedState.stations) {
-            savedState.stations.forEach(savedStation => {
-                const existing = gameState.stations.find(s => s.id === savedStation.id);
-                if (existing) Object.assign(existing, savedStation);
-            });
-        }
-        if (savedState.workers) gameState.workers = savedState.workers;
-
-    } catch (e) {
-        console.error("Load failed", e);
+    if (totalEarned > 0) {
+        showWelcomeModal(totalEarned, breakdown);
     }
-}, // End of load
+}
 
-showWelcomeModal(total, breakdownData) {
+function showWelcomeModal(total, breakdownData) {
     const modal = document.getElementById('welcome-modal');
     const breakdownDiv = document.getElementById('away-breakdown');
     const totalSpan = document.getElementById('away-total-gold');
     const doubleCostSpan = document.getElementById('double-cost');
     
+    // 1. Create the breakdown list
     breakdownDiv.innerHTML = breakdownData.map(item => 
         `<div style="display: flex; justify-content: space-between; border-bottom: 1px solid #444; padding: 4px 0;">
             <span>${item.name}:</span>
@@ -84,10 +68,14 @@ showWelcomeModal(total, breakdownData) {
     ).join('');
 
     totalSpan.innerText = Math.floor(total);
+    
+    // 2. Set cost for Double (e.g., 20% of what they are about to earn)
     const doubleCost = Math.floor(total * 0.2); 
     doubleCostSpan.innerText = doubleCost;
+
     modal.style.display = 'block';
 
+    // 3. Handle Buttons
     document.getElementById('collect-normal-btn').onclick = () => {
         gameState.gold += total;
         modal.style.display = 'none';
@@ -100,8 +88,9 @@ showWelcomeModal(total, breakdownData) {
             gameState.gold += (total * 2);
             modal.style.display = 'none';
             StorageManager.save();
+            alert("Double Gold Collected!");
         } else {
-            alert("Not enough gold!");
+            alert("Not enough gold to double your earnings!");
         }
     };
 }
