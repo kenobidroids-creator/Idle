@@ -18,6 +18,7 @@ const CONFIG = {
 // Global Game State
 let gameState = {
     gold: 0,
+    isBuildMode: false,
     lastSave: Date.now(),
     unassignedWorkers: 1, // Number of workers waiting at the hub. Start with 1 worker available at the hub on fresh saves.
     // Stations positioned on the Grid (gx, gy)

@@ -37,3 +37,11 @@ canvas {
         font-size: 12px; 
         color: #bdc3c7; 
         margin-top: 5px; }
+
+#manual-click-btn, #build-mode-btn, .stat-card button {
+    /* Prevents double-tap zoom on mobile devices */
+    touch-action: manipulation;
+    
+    /* Optional: prevents the gray highlight box when tapping on iOS */
+    -webkit-tap-highlight-color: transparent;
+}

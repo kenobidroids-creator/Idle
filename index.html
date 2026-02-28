@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Idle Tycoon</title>
     <!-- Link to the external CSS file -->
     <link rel="stylesheet" href="style.css">
@@ -12,6 +12,9 @@
         <div class="stat-card">
             <div>Gold: <span id="gold-label">0</span></div>
             <button id="manual-click-btn" style="margin-top: 10px; padding: 5px 10px; background: #e67e22; border: none; color: white; border-radius: 4px; cursor: pointer; pointer-events: auto; font-weight: bold; width: 100%;">Work Manually (+<span id="click-value">1</span>)</button>
+            <button id="build-mode-btn" style="margin-top: 5px; background: #3498db; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; pointer-events: auto; width: 100%; font-weight: bold; ">
+                Enter Build Mode
+            </button>
             <div class="hint">Drag to move • Pinch/Scroll (coming soon)</div>
             <div id="save-indicator" style="color: #2ecc71; font-size: 10px; opacity: 0; transition: opacity 0.5s;">● SAVING...</div>
         </div>
@@ -41,6 +44,26 @@
     </button>
     <button onclick="document.getElementById('upgrade-modal').style.display='none'" style="background: #c0392b; border: none; color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 10px; width: 100%;">Close</button>
 </div>
+
+<div id="welcome-modal" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #2c3e50; color: white; padding: 25px; border-radius: 15px; border: 3px solid #f1c40f; z-index: 200; min-width: 300px; text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+    <h2 style="color: #f1c40f; margin-top: 0;">Welcome Back!</h2>
+    <p>Your workers were busy while you were gone.</p>
+    
+    <div id="away-breakdown" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin: 15px 0; text-align: left; font-size: 14px; max-height: 150px; overflow-y: auto;">
+    </div>
+
+    <div style="font-size: 18px; margin-bottom: 20px;">
+        Total Earned: <span id="away-total-gold" style="color: #2ecc71; font-weight: bold;">0</span> Gold
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+        <button id="collect-normal-btn" style="background: #7f8c8d; border: none; color: white; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">Collect Normal</button>
+        <button id="collect-double-btn" style="background: #e67e22; border: none; color: white; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">
+            Double Earnings! (Costs <span id="double-cost">0</span> Gold)
+        </button>
+    </div>
+</div>
+
     <canvas id="gameCanvas"></canvas>
 
     <script src="src/config.js"></script>

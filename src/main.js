@@ -7,6 +7,13 @@ const goldDisplay = document.getElementById('gold-label');
 // Variables to track click vs drag
 let dragDistance = 0;
 let selectedStation = null;
+let isDraggingMap = false; 
+let lastMouseX = 0; // We need these to draw the Ghost at the right spot
+let lastMouseY = 0;
+let lastTouchX = 0;
+let lastTouchY = 0;
+let originalGx = 0;
+let originalGy = 0;
 
 function init() {
     StorageManager.load(); // Load existing data
@@ -32,15 +39,52 @@ function init() {
         };
     }
 
+    // --- BUILD MODE CLICK LOGIC ---
+const buildBtn = document.getElementById('build-mode-btn');
+if (buildBtn) {
+    console.log("Build button found in HTML!");
+    
+    // We use 'mousedown' instead of 'onclick' sometimes if the canvas is aggressive
+    buildBtn.addEventListener('mousedown', (e) => {
+        e.stopPropagation(); // STOP the game from thinking we clicked the map
+    });
+
+    buildBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation(); 
+        
+        console.log("Build button successfully clicked!");
+        
+        // Ensure the property exists
+        if (gameState.isBuildMode === undefined) gameState.isBuildMode = false;
+
+        gameState.isBuildMode = !gameState.isBuildMode;
+
+        if (gameState.isBuildMode) {
+            buildBtn.innerText = "Exit Build Mode";
+            buildBtn.style.background = "#e74c3c";
+            buildBtn.style.boxShadow = "0 0 10px red"; // Visual cue it's active
+        } else {
+            buildBtn.innerText = "Enter Build Mode";
+            buildBtn.style.background = "#3498db";
+            buildBtn.style.boxShadow = "none";
+            selectedStation = null; // Drop anything we are holding
+            StorageManager.save();
+        }
+    };
+} else {
+    console.error("Error: Could not find build-mode-btn in the document!");
+}
+
     Camera.init(canvas);
     window.addEventListener('resize', resize);
     resize();
 
     // Trigger save when the window is closed or hidden
-    //window.addEventListener('beforeunload', () => StorageManager.save());
-    //document.addEventListener('visibilitychange', () => {
-    //    if (document.visibilityState === 'hidden') StorageManager.save();
-   //});
+    window.addEventListener('beforeunload', () => StorageManager.save());
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') StorageManager.save();
+   });
 
     // Auto-save every 20 seconds
     setInterval(() => StorageManager.save(), 20000);
@@ -51,15 +95,157 @@ function init() {
         goldDisplay.innerText = Math.floor(gameState.gold);
     }, 16);
 
-    canvas.addEventListener('mousedown', () => dragDistance = 0);
-    window.addEventListener('mousemove', () => dragDistance++);
-    canvas.addEventListener('mouseup', (e) => handleInteraction(e));
+    // Start a click/drag
+    // 1. Mouse Down: Decide if we are grabbing a building or the map
+// 1. MOUSE DOWN - High Priority (Capture phase)
+canvas.addEventListener('mousedown', (e) => {
+    dragDistance = 0;
+    const worldPos = Camera.screenToWorld(e.clientX, e.clientY, canvas);
     
-    // Add touch support for the click
-    canvas.addEventListener('touchend', (e) => {
-        if (dragDistance < 5) handleInteraction(e.changedTouches[0]);
+    // Find if a station is under the mouse
+    const clickedStation = gameState.stations.find(s => {
+        const sx = s.gx * CONFIG.TILE_SIZE;
+        const sy = s.gy * CONFIG.TILE_SIZE;
+        return worldPos.x >= sx && worldPos.x <= sx + CONFIG.TILE_SIZE &&
+               worldPos.y >= sy && worldPos.y <= sy + CONFIG.TILE_SIZE;
     });
 
+    // Inside your mousedown listener in main.js
+if (gameState.isBuildMode && clickedStation) {
+    selectedStation = clickedStation;
+    // Record original position in case placement is illegal
+    originalGx = clickedStation.gx;
+    originalGy = clickedStation.gy;
+    
+    e.stopImmediatePropagation(); 
+}
+
+    if (gameState.isBuildMode && clickedStation) {
+        selectedStation = clickedStation;
+        // STOP THE CAMERA from seeing this event
+        e.stopImmediatePropagation(); 
+    } else {
+        isDraggingMap = true;
+    }
+}, true); // The 'true' is vital!
+
+    // Handle movement (Dragging buildings)
+    // 2. Mouse Move: Move either the building OR the map
+// 2. MOUSE MOVE - High Priority
+window.addEventListener('mousemove', (e) => {
+    dragDistance++;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+
+    if (gameState.isBuildMode && selectedStation) {
+        const worldPos = Camera.screenToWorld(e.clientX, e.clientY, canvas);
+        selectedStation.gx = Math.round(worldPos.x / CONFIG.TILE_SIZE);
+        selectedStation.gy = Math.round(worldPos.y / CONFIG.TILE_SIZE);
+        
+        // KILL the event so camera.js doesn't move the map
+        e.stopImmediatePropagation();
+    } else if (!isDraggingMap) {
+        // If we aren't dragging a building but we aren't supposed to move the map
+        e.stopImmediatePropagation();
+    }
+}, true);
+
+    // End the interaction
+    // 3. Mouse Up: Drop everything
+// 3. MOUSE UP
+canvas.addEventListener('mouseup', (e) => {
+    if (gameState.isBuildMode && selectedStation) {
+        // 1. Check if the spot we are hovering over is blocked
+        const isBlocked = gameState.stations.some(s => 
+            s.id !== selectedStation.id && 
+            s.gx === selectedStation.gx && 
+            s.gy === selectedStation.gy
+        );
+
+        if (isBlocked) {
+            // SNAP BACK to original position if blocked
+            selectedStation.gx = originalGx;
+            selectedStation.gy = originalGy;
+            console.log("Placement blocked! Snapping back.");
+        } else {
+            // SUCCESSFUL PLACEMENT
+            StorageManager.save(); 
+            console.log("Station moved successfully.");
+        }
+        StorageManager.save();
+        selectedStation = null;
+        e.stopImmediatePropagation(); // Prevent camera from finishing its pan
+    } else {
+        handleInteraction(e);
+    }
+    isDraggingMap = false;
+}, true);
+    
+    // 1. TOUCH START
+canvas.addEventListener('touchstart', (e) => {
+    dragDistance = 0;
+    const touch = e.touches[0];
+    const worldPos = Camera.screenToWorld(touch.clientX, touch.clientY, canvas);
+    
+    const clickedStation = gameState.stations.find(s => {
+        const sx = s.gx * CONFIG.TILE_SIZE;
+        const sy = s.gy * CONFIG.TILE_SIZE;
+        return worldPos.x >= sx && worldPos.x <= sx + CONFIG.TILE_SIZE &&
+               worldPos.y >= sy && worldPos.y <= sy + CONFIG.TILE_SIZE;
+    });
+
+    if (gameState.isBuildMode && clickedStation) {
+        selectedStation = clickedStation;
+        originalGx = clickedStation.gx;
+        originalGy = clickedStation.gy;
+        
+        e.preventDefault(); // Stop mobile "pull-to-refresh" or scrolling
+        e.stopImmediatePropagation(); 
+    }
+}, { capture: true, passive: false });
+
+// 2. TOUCH MOVE
+window.addEventListener('touchmove', (e) => {
+    dragDistance++;
+    const touch = e.touches[0];
+    lastTouchX = touch.clientX;
+    lastTouchY = touch.clientY;
+
+    if (gameState.isBuildMode && selectedStation) {
+        const worldPos = Camera.screenToWorld(touch.clientX, touch.clientY, canvas);
+        selectedStation.gx = Math.round(worldPos.x / CONFIG.TILE_SIZE);
+        selectedStation.gy = Math.round(worldPos.y / CONFIG.TILE_SIZE);
+        
+        e.preventDefault();
+        e.stopImmediatePropagation();
+    }
+}, { capture: true, passive: false });
+
+// 3. TOUCH END
+canvas.addEventListener('touchend', (e) => {
+    if (gameState.isBuildMode && selectedStation) {
+        // Reuse your existing collision logic
+        const isBlocked = gameState.stations.some(s => 
+            s.id !== selectedStation.id && 
+            s.gx === selectedStation.gx && 
+            s.gy === selectedStation.gy
+        );
+
+        if (isBlocked) {
+            selectedStation.gx = originalGx;
+            selectedStation.gy = originalGy;
+        } else {
+            StorageManager.save();
+        }
+        
+        selectedStation = null;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+    } else {
+        // If not building, handle regular interaction (like opening modals)
+        if (dragDistance < 5) handleInteraction(e.changedTouches[0]);
+    }
+}, { capture: true, passive: false });
     requestAnimationFrame(render);
 }
 
@@ -115,6 +301,27 @@ function render() {
         ctx.fillText("LOCKED", s.gx * CONFIG.TILE_SIZE + 32, s.gy * CONFIG.TILE_SIZE + 36);
     }
 });
+
+    // --- BUILD MODE VISUALS ---
+if (gameState.isBuildMode && selectedStation) {
+    const gx = selectedStation.gx;
+    const gy = selectedStation.gy;
+
+    // Is there ANOTHER station here? (Compare IDs so it doesn't collide with itself)
+    const isBlocked = gameState.stations.some(s => 
+        s.id !== selectedStation.id && s.gx === gx && s.gy === gy
+    );
+
+    ctx.save();
+    // 0.4 means 40% transparent
+    ctx.fillStyle = isBlocked ? "rgba(231, 76, 60, 0.4)" : "rgba(46, 204, 113, 0.4)";
+    ctx.strokeStyle = isBlocked ? "#e74c3c" : "#2ecc71";
+    ctx.lineWidth = 3;
+
+    ctx.fillRect(gx * CONFIG.TILE_SIZE, gy * CONFIG.TILE_SIZE, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+    ctx.strokeRect(gx * CONFIG.TILE_SIZE, gy * CONFIG.TILE_SIZE, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+    ctx.restore();
+}
     // 3. Draw Workers
     const time = Date.now() * 0.005; // Create a steady pulse value
 
@@ -168,7 +375,14 @@ function handleInteraction(e) {
     });
 
     if (clickedStation) {
-        showUpgradeModal(clickedStation);
+        // CHECK MODE HERE:
+        if (gameState.isBuildMode) {
+            // Pick it up for the mousemove listener to handle
+            selectedStation = clickedStation; 
+        } else {
+            // Open menu as normal
+            showUpgradeModal(clickedStation);
+        }
     }
 }
 
