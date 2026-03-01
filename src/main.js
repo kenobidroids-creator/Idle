@@ -582,15 +582,21 @@ function showUpgradeModal(station) {
 
     // Setup plus/minus buttons (same as your previous code)
     document.getElementById('plus-worker').onclick = () => {
-        if (gameState.unassignedWorkers > 0) {
-            gameState.unassignedWorkers--;
-            station.workersAssigned++;
-            const worker = gameState.workers.find(w => w.assignedStationId === 99);
-            if (worker) worker.assignedStationId = station.id;
-            showUpgradeModal(station);
-            updateStatBar();           // NEW: Refresh the top stat bar
-        }
-    };
+    // Check BOTH: Do we have a worker AND is there space at the station?
+    if (gameState.unassignedWorkers > 0 && station.workersAssigned < (station.maxWorkers || 3)) {
+        gameState.unassignedWorkers--;
+        station.workersAssigned++;
+        
+        // Find the worker at the Hub (ID 99) and send them to this station
+        const worker = gameState.workers.find(w => w.assignedStationId === 99);
+        if (worker) worker.assignedStationId = station.id;
+        
+        showUpgradeModal(station); // Refresh the UI
+        updateStatBar();           // Refresh the top bar
+    } else if (station.workersAssigned >= (station.maxWorkers || 3)) {
+        alert("This station is at maximum capacity!");
+    }
+};
 
     document.getElementById('minus-worker').onclick = () => {
         if (station.workersAssigned > 0) {
@@ -602,6 +608,15 @@ function showUpgradeModal(station) {
             updateStatBar();           // NEW: Refresh the top stat bar
         }
     };
+
+    const plusBtn = document.getElementById('plus-worker');
+if (station.workersAssigned >= (station.maxWorkers || 3)) {
+    plusBtn.style.opacity = "0.5";
+    plusBtn.style.cursor = "not-allowed";
+} else {
+    plusBtn.style.opacity = "1";
+    plusBtn.style.cursor = "pointer";
+}
 
     // 4. Update the upgrade button click to use 'upgradeCost'
     upgradeBtn.onclick = () => {
