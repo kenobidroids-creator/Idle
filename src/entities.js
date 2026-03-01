@@ -41,25 +41,35 @@ const EntityManager = {
         });
 
         // 3. Process Station Income
-        gameState.stations.forEach(s => {
+gameState.stations.forEach(s => {
+    // We only process if it's a production station and has workers assigned
     if (!s.isRecruiter && s.workersAssigned > 0) {
-        // NEW: Check if at least one worker assigned to this station has arrived
-        const anyWorkerArrived = gameState.workers.some(w => 
+        
+        // Count how many workers have actually arrived ('WORKING' state)
+        const workersPresent = gameState.workers.filter(w => 
             w.assignedStationId === s.id && w.state === 'WORKING'
-        );
+        ).length;
 
-        if (anyWorkerArrived) {
-            s.currentTimer += dt;
+        // ONLY progress the timer if at least one worker is physically there
+        if (workersPresent > 0) {
+            s.currentTimer += dt; // dt is the time passed since last frame
+
             if (s.currentTimer >= s.workTime) {
-                gameState.gold += (s.income * s.level) * s.workersAssigned;
-                s.currentTimer = 0;
+                // Calculation: (Base Income * Level) * Number of workers present
+                const earned = (s.income * s.level) * workersPresent;
+                gameState.gold += earned;
+                s.currentTimer = 0; // Reset for next cycle
+
+                // Popup Logic
+                const worldX = s.gx * CONFIG.TILE_SIZE + (CONFIG.TILE_SIZE / 2) + (Math.random() * 20 - 10);
+                const worldY = s.gy * CONFIG.TILE_SIZE + (Math.random() * 20 - 10);
+                if (typeof createPopup === 'function') {
+                    createPopup(worldX, worldY, `+${earned}`);
+                }
             }
-        } else {
-            // Optional: Reset timer if no one is there, 
-            // or just keep it paused (don't increment s.currentTimer)
         }
     }
-})
+});
     },
 
     spawnWorker() {

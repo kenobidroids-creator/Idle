@@ -15,6 +15,37 @@ let lastTouchY = 0;
 let originalGx = 0;
 let originalGy = 0;
 
+let popups = [];
+
+function createPopup(x, y, text, color = "#f1c40f") {
+    popups.push({
+        x: x,
+        y: y,
+        text: text,
+        color: color,
+        life: 1.0, // Progress from 1.0 down to 0
+        velocity: 0.5 + Math.random() * 0.5 // Speed it floats up
+    });
+}
+
+function updateStatBar() {
+    // 1. Update Gold
+    const goldLabel = document.getElementById('gold-label');
+    if (goldLabel) goldLabel.innerText = Math.floor(gameState.gold);
+
+    // 2. Update Workers (Available / Total)
+    const workerLabel = document.getElementById('worker-count-label');
+    if (workerLabel) {
+        const totalWorkers = gameState.unassignedWorkers + 
+            gameState.stations.reduce((sum, s) => sum + (s.workersAssigned || 0), 0);
+        
+        workerLabel.innerText = `${gameState.unassignedWorkers} / ${totalWorkers}`;
+        
+        // Bonus: Turn red if none available
+        workerLabel.style.color = gameState.unassignedWorkers === 0 ? "#e74c3c" : "#3498db";
+    }
+}
+
 function init() {
     StorageManager.load(); // Load existing data
 
@@ -94,6 +125,15 @@ if (buildBtn) {
         EntityManager.update(16);
         goldDisplay.innerText = Math.floor(gameState.gold);
     }, 16);
+    updateStatBar();           // NEW: Refresh the top stat bar
+
+    // --- NEW: Update the Worker display ---
+    const totalWorkers = gameState.unassignedWorkers + 
+    gameState.stations.reduce((sum, s) => sum + (s.workersAssigned || 0), 0);
+    const workerLabel = document.getElementById('worker-count-label');
+    if (workerLabel) {
+        workerLabel.innerText = `${gameState.unassignedWorkers} / ${totalWorkers}`;
+    }
 
     // Start a click/drag
     // 1. Mouse Down: Decide if we are grabbing a building or the map
@@ -302,6 +342,7 @@ function render() {
     }
 });
 
+
     // --- BUILD MODE VISUALS ---
 if (gameState.isBuildMode && selectedStation) {
     const gx = selectedStation.gx;
@@ -322,6 +363,23 @@ if (gameState.isBuildMode && selectedStation) {
     ctx.strokeRect(gx * CONFIG.TILE_SIZE, gy * CONFIG.TILE_SIZE, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
     ctx.restore();
 }
+
+// Draw Popups (Inside the translated world space)
+popups.forEach((p, index) => {
+    p.y -= p.velocity; 
+    p.life -= 0.01;    
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.color;
+    ctx.font = "bold 20px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(p.text, p.x, p.y);
+    ctx.restore();
+
+    if (p.life <= 0) popups.splice(index, 1);
+});
+
     // 3. Draw Workers
     const time = Date.now() * 0.005; // Create a steady pulse value
 
@@ -511,7 +569,7 @@ function showUpgradeModal(station) {
 
     // Update the two income fields
     if (document.getElementById('modal-base-income')) {
-        document.getElementById('modal-base-income').innerText = baseIncomePerWorker;
+        document.getElementById('modal-base-income').innerText = station.income;
     }
     if (document.getElementById('modal-income')) {
         document.getElementById('modal-income').innerText = currentIncome;
@@ -530,6 +588,7 @@ function showUpgradeModal(station) {
             const worker = gameState.workers.find(w => w.assignedStationId === 99);
             if (worker) worker.assignedStationId = station.id;
             showUpgradeModal(station);
+            updateStatBar();           // NEW: Refresh the top stat bar
         }
     };
 
@@ -540,6 +599,7 @@ function showUpgradeModal(station) {
             const worker = gameState.workers.find(w => w.assignedStationId === station.id);
             if (worker) worker.assignedStationId = 99;
             showUpgradeModal(station);
+            updateStatBar();           // NEW: Refresh the top stat bar
         }
     };
 
