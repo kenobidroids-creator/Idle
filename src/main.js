@@ -112,7 +112,7 @@ if (buildBtn) {
     resize();
 
     // Trigger save when the window is closed or hidden
-    window.addEventListener('beforeunload', () => StorageManager.save());
+    //window.addEventListener('beforeunload', () => StorageManager.save());
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') StorageManager.save();
    });
@@ -452,7 +452,11 @@ function showUpgradeModal(station) {
     const hubBtn = document.getElementById('hub-milestone-btn');
     hubBtn.style.display = "none"; // Hide by default for normal stations
 
+    const plusBtn = document.getElementById('plus-worker');
+    const minusBtn = document.getElementById('plus-worker');
 
+    plusBtn.onclick = null;
+    minusBtn.onclick = null;
     
     modal.style.display = 'block';
 
@@ -501,15 +505,19 @@ function showUpgradeModal(station) {
             document.getElementById('modal-income').parentElement.style.display = 'none';
         }
 
+
+
         // Calculation: Level 1 -> 500, Level 2 -> 1250, Level 3 -> 3125
         const nextClickPower = station.level + 1;
-        const upgradeCost = Math.floor(station.baseUpgradeCost * Math.pow(2.5, station.level - 1));
+        const hubUpgradeCost = Math.floor(
+    (station.unlockCost || 500) * Math.pow(CONFIG.exGrowth, station.level - 1)
+);
 
-        hubBtn.innerText = `Upgrade Click to +${nextClickPower} (${upgradeCost} Gold)`;
+        hubBtn.innerText = `Upgrade Click to +${nextClickPower} (${hubUpgradeCost} Gold)`;
 
         hubBtn.onclick = () => {
-            if (gameState.gold >= upgradeCost) {
-                gameState.gold -= upgradeCost;
+            if (gameState.gold >= hubUpgradeCost) {
+                gameState.gold -= hubUpgradeCost;
                 station.level++; // This is what the manual-click-btn checks!
                 
                 // Update the main UI button text immediately
@@ -527,7 +535,7 @@ function showUpgradeModal(station) {
         const hireCost = 50 * (gameState.workers.length);
         document.getElementById('modal-title').innerText = "Recruitment Hub";
         document.getElementById('modal-level').innerText = "N/A";
-        document.getElementById('modal-cost').innerText = `Hire: ${hireCost} | Upgrade: ${upgradeCost}`;
+        document.getElementById('modal-cost').innerText = `Hire: ${hireCost} | Upgrade: ${station.upgradeCost}`;
         workerControls.style.display = "none";
         upgradeBtn.innerText = "Hire Worker";
         
@@ -609,7 +617,7 @@ function showUpgradeModal(station) {
         }
     };
 
-    const plusBtn = document.getElementById('plus-worker');
+    
 if (station.workersAssigned >= (station.maxWorkers || 3)) {
     plusBtn.style.opacity = "0.5";
     plusBtn.style.cursor = "not-allowed";

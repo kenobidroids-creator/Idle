@@ -56,5 +56,16 @@ const Camera = {
 
     detach(ctx) {
         ctx.restore();
-    }
+    },
+
+    zoomAt(delta, centerX, centerY, canvas) {
+    const oldZoom = this.zoom;
+    // Adjust zoom level (clamped between 0.5x and 2x)
+    this.zoom = Math.min(Math.max(0.5, this.zoom + delta), 2);
+    
+    // This math ensures we zoom toward the cursor/pinch center
+    const zoomRatio = this.zoom / oldZoom;
+    this.x = centerX - (centerX - this.x) / zoomRatio;
+    this.y = centerY - (centerY - this.y) / zoomRatio;
+}
 };
